@@ -25,14 +25,8 @@ ppm_processor_pixel *get_pixel(ppm_processor_canvas *canvas, int width_index, in
     return pixels_row + width_index;
 }
 
-ppm_processor_pixel get_pixel_debug(ppm_processor_canvas canvas, int width_index, int height_index){
-    ppm_processor_pixel *pixels_row = *(canvas.pixels + height_index);
-    ppm_processor_pixel pixel = *(pixels_row + width_index);
-    return pixel;
-}
-
-void ppm_processor_print_image(ppm_processor_canvas *canvas, const char *fileName){
-    FILE *output = fopen(fileName,"w");
+void ppm_processor_print_image(ppm_processor_canvas *canvas, const char *file_name){
+    FILE *output = fopen(file_name,"w");
     fprintf(output,"P3\n");
     fprintf(output,"%d %d\n", canvas->width, canvas->height);
     fprintf(output,"255\n");
