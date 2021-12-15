@@ -1,4 +1,6 @@
 **/obj/
 **/.vscode/
 **/*.exe
-**/output.ppm
+**/*.ppm
+**/*.log
+**/line_drawing_test
