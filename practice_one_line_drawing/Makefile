@@ -25,4 +25,6 @@ $(TARGET): $(OBJS)
 
 clean:
 	rm -fv obj/*.o $(TARGET)
-	rm $(TARGET).exe
+	rm -fv *.exe
+	rm -fv *.ppm
+	rm -fv *.log
