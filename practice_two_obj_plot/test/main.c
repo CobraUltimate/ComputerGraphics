@@ -8,10 +8,10 @@ void draw_model_line(ppm_processor_canvas *canvas, obj_processor_three_dimension
 int main(int argc, char *argv[])
 {
     double projection_center_z, projection_plane_z, scale;
-    sscanf(argv[3], "%lf", &projection_plane_z);
-    sscanf(argv[4], "%lf", &projection_center_z);
-    sscanf(argv[5], "%lf", &scale);
     obj_processor_three_dimensions_model *model = obj_processor_read_obj_from_file(argv[1]);
+    sscanf(argv[2], "%lf", &projection_plane_z);
+    sscanf(argv[3], "%lf", &projection_center_z);
+    sscanf(argv[4], "%lf", &scale);
     printf("Model loaded\n");
     obj_processor_three_dimensions_model_vertex *projection_center = (obj_processor_three_dimensions_model_vertex *)malloc(sizeof(obj_processor_three_dimensions_model_vertex));
     obj_processor_set_three_dimensions_model_vertex(projection_center, 0, 0, projection_center_z, 0);
