@@ -5,3 +5,4 @@
 **/*.log
 **/line_drawing_test
 **/obj_processor_test
+**/*.obj
