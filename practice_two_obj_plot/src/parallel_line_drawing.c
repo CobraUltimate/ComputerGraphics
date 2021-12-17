@@ -38,6 +38,7 @@ void parallel_line_drawing_draw_horizontal_line_naive(ppm_processor_canvas *canv
     line_drawing_point *right_point = line_drawing_get_right_point(start_point, end_point);
     int processor_index;
     pthread_t threads[number_of_processors];
+    parallel_line_drawing_draw_line_thread_arguments *arguments[number_of_processors];
     for(processor_index = 0; processor_index < number_of_processors; processor_index++){
         line_drawing_point line_segment_start_point, line_segment_end_point;
         line_segment_start_point.x = left_point->x + partition_width * processor_index;
@@ -46,10 +47,16 @@ void parallel_line_drawing_draw_horizontal_line_naive(ppm_processor_canvas *canv
         line_segment_end_point.y = left_point->y;
         if(line_segment_end_point.x > right_point->x) line_segment_end_point.x = right_point->x;
         parallel_line_drawing_draw_line_thread_arguments *thread_arguments = parallel_line_drawing_get_draw_line_thread_arguments(canvas, &line_segment_start_point, &line_segment_end_point, line_drawing_draw_horizontal_line_naive);
+        arguments[processor_index] = thread_arguments;
         pthread_create(&threads[processor_index], NULL, parallel_line_drawing_draw_line_thread_wrapper, thread_arguments);
     }
     for(processor_index = 0; processor_index < number_of_processors; processor_index++){
         pthread_join(threads[processor_index], NULL);
+    }
+    for(processor_index = 0; processor_index < number_of_processors; processor_index++){
+        free(arguments[processor_index]->start_point);
+        free(arguments[processor_index]->end_point);
+        free(arguments[processor_index]);
     }
 }
 
@@ -60,6 +67,7 @@ void parallel_line_drawing_draw_vertical_line_naive(ppm_processor_canvas *canvas
     line_drawing_point *top_point = line_drawing_get_top_point(start_point, end_point);
     int processor_index;
     pthread_t threads[number_of_processors];
+    parallel_line_drawing_draw_line_thread_arguments *arguments[number_of_processors];
     for(processor_index = 0; processor_index < number_of_processors; processor_index++){
         line_drawing_point line_segment_start_point, line_segment_end_point;
         line_segment_start_point.x = bottom_point->x;
@@ -68,10 +76,16 @@ void parallel_line_drawing_draw_vertical_line_naive(ppm_processor_canvas *canvas
         line_segment_end_point.y = bottom_point->y + partition_height * (processor_index + 1);
         if(line_segment_end_point.y > top_point->y) line_segment_end_point.y = top_point->y;
         parallel_line_drawing_draw_line_thread_arguments *thread_arguments = parallel_line_drawing_get_draw_line_thread_arguments(canvas, &line_segment_start_point, &line_segment_end_point, line_drawing_draw_vertical_line_naive);
+        arguments[processor_index] = thread_arguments;
         pthread_create(&threads[processor_index], NULL, parallel_line_drawing_draw_line_thread_wrapper, thread_arguments);
     }
     for(processor_index = 0; processor_index < number_of_processors; processor_index++){
         pthread_join(threads[processor_index], NULL);
+    }
+    for(processor_index = 0; processor_index < number_of_processors; processor_index++){
+        free(arguments[processor_index]->start_point);
+        free(arguments[processor_index]->end_point);
+        free(arguments[processor_index]);
     }
 }
 
@@ -85,6 +99,7 @@ void parallel_line_drawing_draw_line_independent_x(ppm_processor_canvas *canvas,
     double slope = (double)slope_y / slope_x;
     int processor_index;
     pthread_t threads[number_of_processors];
+    parallel_line_drawing_draw_line_thread_arguments *arguments[number_of_processors];
     for(processor_index = 0; processor_index < number_of_processors; processor_index++){
         line_drawing_point line_segment_start_point, line_segment_end_point;
         int start_point_offset_y = (int)(partition_width * processor_index * slope + 0.5);
@@ -97,10 +112,16 @@ void parallel_line_drawing_draw_line_independent_x(ppm_processor_canvas *canvas,
         if(slope > 0 && line_segment_end_point.y > right_point->y) line_segment_end_point.y = right_point->y;
         if(slope < 0 && line_segment_end_point.y < right_point->y) line_segment_end_point.y = right_point->y;
         parallel_line_drawing_draw_line_thread_arguments *thread_arguments = parallel_line_drawing_get_draw_line_thread_arguments(canvas, &line_segment_start_point, &line_segment_end_point, line_drawing_algorithm);
+        arguments[processor_index] = thread_arguments;
         pthread_create(&threads[processor_index], NULL, parallel_line_drawing_draw_line_thread_wrapper, thread_arguments);
     }
     for(processor_index = 0; processor_index < number_of_processors; processor_index++){
         pthread_join(threads[processor_index], NULL);
+    }
+    for(processor_index = 0; processor_index < number_of_processors; processor_index++){
+        free(arguments[processor_index]->start_point);
+        free(arguments[processor_index]->end_point);
+        free(arguments[processor_index]);
     }
 }
 
@@ -114,6 +135,7 @@ void parallel_line_drawing_draw_line_independent_y(ppm_processor_canvas *canvas,
     double slope = (double)slope_x / slope_y;
     int processor_index;
     pthread_t threads[number_of_processors];
+    parallel_line_drawing_draw_line_thread_arguments *arguments[number_of_processors];
     for(processor_index = 0; processor_index < number_of_processors; processor_index++){
         line_drawing_point line_segment_start_point, line_segment_end_point;
         int start_point_offset_x = (int)(partition_height * processor_index * slope + 0.5);
@@ -126,10 +148,16 @@ void parallel_line_drawing_draw_line_independent_y(ppm_processor_canvas *canvas,
         if(slope > 0 && line_segment_end_point.x > top_point->x) line_segment_end_point.x = top_point->x;
         if(slope < 0 && line_segment_end_point.x < top_point->x) line_segment_end_point.x = top_point->x;
         parallel_line_drawing_draw_line_thread_arguments *thread_arguments = parallel_line_drawing_get_draw_line_thread_arguments(canvas, &line_segment_start_point, &line_segment_end_point, line_drawing_algorithm);
+        arguments[processor_index] = thread_arguments;
         pthread_create(&threads[processor_index], NULL, parallel_line_drawing_draw_line_thread_wrapper, thread_arguments);
     }
     for(processor_index = 0; processor_index < number_of_processors; processor_index++){
         pthread_join(threads[processor_index], NULL);
+    }
+    for(processor_index = 0; processor_index < number_of_processors; processor_index++){
+        free(arguments[processor_index]->start_point);
+        free(arguments[processor_index]->end_point);
+        free(arguments[processor_index]);
     }
 }
 

@@ -1,17 +1,32 @@
 #include "obj_processor.h"
 
 obj_processor_three_dimensions_model *obj_processor_read_obj_from_file(char *file_name){
-    long vertex_count = obj_processor_count_vertices(file_name);
-    long faces_count = obj_processor_count_faces(file_name);
+    long vertex_count, faces_count, file_lenght;
+    char *memory_file = obj_processor_load_obj_file_to_memory(file_name, &file_lenght);
+    obj_processor_count_faces_and_vertices(memory_file, file_lenght, &vertex_count, &faces_count);
     obj_processor_three_dimensions_model *model = obj_processor_get_three_dimensions_model(vertex_count, faces_count);
-    obj_processor_prase_obj_file(file_name, model);
+    obj_processor_parse_obj_file(memory_file, file_lenght, model, vertex_count, faces_count);
+    free(memory_file);
     return model;
+}
+
+char *obj_processor_load_obj_file_to_memory(char *file_name, long *file_lenght){
+    FILE *fileptr;
+    char *buffer;
+    fileptr = fopen(file_name, "rb");
+    fseek(fileptr, 0, SEEK_END);
+    *file_lenght = ftell(fileptr);
+    rewind(fileptr);
+    buffer = (char *)malloc(*file_lenght * sizeof(char));
+    fread(buffer, *file_lenght, 1, fileptr);
+    fclose(fileptr);
+    return buffer;
 }
 
 obj_processor_three_dimensions_model *obj_processor_get_three_dimensions_model(long vertex_count, long faces_count){
     obj_processor_three_dimensions_model *model = (obj_processor_three_dimensions_model *)malloc(sizeof(obj_processor_three_dimensions_model));
-    obj_processor_three_dimensions_model_vertex *vertices = (obj_processor_three_dimensions_model_vertex *)malloc(sizeof(obj_processor_three_dimensions_model_vertex) * vertex_count);
-    obj_processor_three_dimensions_model_face *faces = (obj_processor_three_dimensions_model_face *)malloc(sizeof(obj_processor_three_dimensions_model_face) * faces_count);
+    obj_processor_three_dimensions_model_vertex *vertices = (obj_processor_three_dimensions_model_vertex *)calloc(vertex_count, sizeof(obj_processor_three_dimensions_model_vertex));
+    obj_processor_three_dimensions_model_face *faces = (obj_processor_three_dimensions_model_face *)calloc(faces_count, sizeof(obj_processor_three_dimensions_model_face));
     model->vertex_count = vertex_count;
     model->faces_count = faces_count;
     model->vertices = vertices;
@@ -19,8 +34,15 @@ obj_processor_three_dimensions_model *obj_processor_get_three_dimensions_model(l
     return model;
 }
 
-void obj_processor_prase_obj_file(char *file_name, obj_processor_three_dimensions_model *model){
-    FILE *file = fopen(file_name, "r");
+void obj_processor_set_three_dimensions_model_vertex(obj_processor_three_dimensions_model_vertex *vertex, double x, double y, double z, double w){
+    vertex->x = x;
+    vertex->y = y;
+    vertex->z = z;
+    vertex->w = w;
+}
+
+void obj_processor_parse_obj_file(char *memory_file, long file_lenght, obj_processor_three_dimensions_model *model, long vertex_count, long faces_count){
+    FILE *file = fmemopen(memory_file, file_lenght, "r");
     char line[100];
     char *line_readed = fgets(line, 100, file);
     int vertex_index = 0;
@@ -40,7 +62,7 @@ void obj_processor_prase_obj_file(char *file_name, obj_processor_three_dimension
 
 void obj_processor_parse_vertex_line(char *line, obj_processor_three_dimensions_model *model, int vertex_index){
     obj_processor_three_dimensions_model_vertex *vertex = model->vertices + vertex_index;
-    sscanf(line + 2, "%f %f %f", &vertex->x, &vertex->y, &vertex->z);
+    sscanf(line + 2, "%lf %lf %lf", &vertex->x, &vertex->y, &vertex->z);
 }
 
 void obj_processor_parse_face_line(char *line, obj_processor_three_dimensions_model *model, int face_index){
@@ -60,26 +82,84 @@ void obj_processor_parse_face_line(char *line, obj_processor_three_dimensions_mo
     face->vertices_indexes = vertices_indexes;
 }
 
-long obj_processor_count_vertices(char *file_name){
-    FILE *file = fopen(file_name, "r");
-    int vertex_count = 0;
+void obj_processor_count_faces_and_vertices(char *memory_file, long file_lenght, long *vertex_count, long *faces_count){
+    FILE *file = fmemopen(memory_file, file_lenght, "r");
+    *vertex_count = 0;
+    *faces_count = 0;
     char line[100];
     char *result = fgets(line, 100, file);
     while(result != NULL){
-        if(line[0] == 'v') vertex_count++;
+        if(line[0] == 'v') *vertex_count += 1;
+        else if(line[0] == 'f') *faces_count += 1;
         result = fgets(line, 100, file);
     }
-    return vertex_count;
 }
 
-long obj_processor_count_faces(char *file_name){
-    FILE *file = fopen(file_name, "r");
-    int vertex_count = 0;
-    char line[100];
-    char *result = fgets(line, 100, file);
-    while(result != NULL){
-        if(line[0] == 'f') vertex_count++;
-        result = fgets(line, 100, file);
+obj_processor_three_dimensions_model_vertex *obj_processor_get_two_dimensions_projection(obj_processor_three_dimensions_model *model, obj_processor_three_dimensions_model_vertex *projection_center, double projection_plane_z){
+    obj_processor_transform_matrix *projection_matrix = obj_processor_get_two_dimensions_projection_matrix(projection_center, projection_plane_z);
+    return obj_processor_apply_transform_matrix_to_model(model, projection_matrix);
+}
+
+obj_processor_transform_matrix *obj_processor_create_transform_matrix(){
+    return (obj_processor_transform_matrix *)malloc(sizeof(obj_processor_transform_matrix) * 16);
+}
+
+void obj_processor_set_transform_matrix_cell(obj_processor_transform_matrix *transform_matrix, int row, int column, double value){
+    *((transform_matrix + row * 4) + column) = value;
+}
+
+double obj_processor_get_transform_matrix_cell(obj_processor_transform_matrix *transform_matrix, int row, int column){
+    return *((transform_matrix + row * 4) + column);
+}
+
+void obj_processor_set_transform_matrix_row(obj_processor_transform_matrix *transform_matrix, int row, double value_one, double value_two, double value_three, double value_four){
+    *(transform_matrix + row * 4) = value_one;
+    *((transform_matrix + row * 4) + 1) = value_two;
+    *((transform_matrix + row * 4) + 2) = value_three;
+    *((transform_matrix + row * 4) + 3) = value_four;
+}
+
+obj_processor_three_dimensions_model_vertex *obj_processor_apply_transform_matrix_to_vertex(obj_processor_three_dimensions_model_vertex *vertex, obj_processor_transform_matrix *transform_matrix){
+    obj_processor_three_dimensions_model_vertex *transformed_vertex = (obj_processor_three_dimensions_model_vertex *)malloc(sizeof(obj_processor_three_dimensions_model_vertex));
+    vertex->w = 1;
+    transformed_vertex->x = obj_processor_apply_transform_matrix_calculate_column(vertex, transform_matrix, 0);
+    transformed_vertex->y = obj_processor_apply_transform_matrix_calculate_column(vertex, transform_matrix, 1);
+    transformed_vertex->z = obj_processor_apply_transform_matrix_calculate_column(vertex, transform_matrix, 2);
+    transformed_vertex->w = obj_processor_apply_transform_matrix_calculate_column(vertex, transform_matrix, 3);
+    transformed_vertex->x /= transformed_vertex->w;
+    transformed_vertex->y /= transformed_vertex->w;
+    transformed_vertex->z /= transformed_vertex->w;
+    transformed_vertex->w /= transformed_vertex->w;
+    return transformed_vertex;
+}
+
+obj_processor_three_dimensions_model_vertex *obj_processor_apply_transform_matrix_to_model(obj_processor_three_dimensions_model *model, obj_processor_transform_matrix *transform_matrix){
+    obj_processor_three_dimensions_model_vertex *projected_vertices = (obj_processor_three_dimensions_model_vertex *)malloc(sizeof(obj_processor_three_dimensions_model_vertex) * model->vertex_count);
+    int vertex_index;
+    for(vertex_index = 0; vertex_index < model->vertex_count; vertex_index++){
+        obj_processor_three_dimensions_model_vertex* vertex = model->vertices + vertex_index;
+        obj_processor_three_dimensions_model_vertex *projected_vertex = obj_processor_apply_transform_matrix_to_vertex(vertex, transform_matrix);
+        obj_processor_set_three_dimensions_model_vertex(projected_vertices + vertex_index, projected_vertex->x, projected_vertex->y, projected_vertex->z, projected_vertex->w);
+        free(projected_vertex);
     }
-    return vertex_count;
+    return projected_vertices;
+}
+
+double obj_processor_apply_transform_matrix_calculate_column(obj_processor_three_dimensions_model_vertex *vertex, obj_processor_transform_matrix *transform_matrix, int column){
+    double column_value = 0;
+    column_value += vertex->x * obj_processor_get_transform_matrix_cell(transform_matrix, 0, column);
+    column_value += vertex->y * obj_processor_get_transform_matrix_cell(transform_matrix, 1, column);
+    column_value += vertex->z * obj_processor_get_transform_matrix_cell(transform_matrix, 2, column);
+    column_value += vertex->w * obj_processor_get_transform_matrix_cell(transform_matrix, 3, column);
+    return column_value;
+}
+
+obj_processor_transform_matrix *obj_processor_get_two_dimensions_projection_matrix(obj_processor_three_dimensions_model_vertex *projection_center, double projection_plane_z){
+    double d = projection_center->z - projection_plane_z;
+    obj_processor_transform_matrix *projection_matrix = obj_processor_create_transform_matrix();
+    obj_processor_set_transform_matrix_row(projection_matrix, 0, 1, 0, 0, 0);
+    obj_processor_set_transform_matrix_row(projection_matrix, 1, 0, 1, 0, 0);
+    obj_processor_set_transform_matrix_row(projection_matrix, 2, 0, 0, (projection_plane_z * -1) / d, -1 / d);
+    obj_processor_set_transform_matrix_row(projection_matrix, 3, 0, 0, projection_plane_z * (projection_center->z / d), projection_center->z / d);
+    return projection_matrix;
 }
