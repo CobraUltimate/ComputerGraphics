@@ -1,3 +1,6 @@
+This practice needs the ffmpeg linux package. You can install it with the following command:
+apt-get install ffmpeg
+
 You can download a statue of Liberty test model in this link https://drive.google.com/file/d/1XV3Lh00eEVkm0UWYZ_MCcxyDjGxeldjo/view
 
 The program animation must be called with the following arguments:
