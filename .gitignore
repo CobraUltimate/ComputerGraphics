@@ -3,6 +3,8 @@
 **/*.exe
 **/*.ppm
 **/*.log
+**/*.avi
 **/line_drawing_test
 **/obj_processor_test
+**/animation
 **/*.obj

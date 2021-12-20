@@ -37,41 +37,66 @@ int main(int argc, char *argv[])
     obj_processor_three_dimensions_model_vertex *projection_center = (obj_processor_three_dimensions_model_vertex *)malloc(sizeof(obj_processor_three_dimensions_model_vertex));
     obj_processor_set_three_dimensions_model_vertex(projection_center, 0, 0, projection_center_z, 0);
     obj_processor_transform_matrix *projection_matrix = obj_processor_get_two_dimensions_projection_matrix(projection_center, projection_plane_z);
-    obj_processor_three_dimensions_model_vertex *projected_vertices = obj_processor_apply_transform_matrix_to_model(model, projection_matrix);
-    printf("Projected vertices\n");
-    printf("Ploting model\n");
-    ppm_processor_canvas *canvas = ppm_processor_get_canvas(canvas_width, canvas_height);
-    draw_model(model, projected_vertices, canvas);
-    printf("Printing image\n");
-    ppm_processor_print_image(canvas, "obj_processor_test.ppm");
-    printf("Success\n");
 
 
     obj_processor_three_dimensions_model_vertex *translation = (obj_processor_three_dimensions_model_vertex *)malloc(sizeof(obj_processor_three_dimensions_model_vertex));
-    obj_processor_set_three_dimensions_model_vertex(translation, 0, y_translation, 0, 0);
-    printf("Ploting model\n");
+    obj_processor_set_three_dimensions_model_vertex(translation, 0, y_translation / 60, 0, 0);
     obj_processor_transform_matrix *translation_matrix = obj_processor_get_translation_matrix(translation);
-    obj_processor_three_dimensions_model_vertex *translated_vertices = obj_processor_apply_transform_matrix_to_model(model, translation_matrix);
-    model->vertices = translated_vertices;
-    projected_vertices = obj_processor_apply_transform_matrix_to_model(model, projection_matrix);
-    canvas = ppm_processor_get_canvas(canvas_width, canvas_height);
-    draw_model(model, projected_vertices, canvas);
-    printf("Printing image\n");
-    ppm_processor_print_image(canvas, "obj_processor_test_translated.ppm");
-    printf("Success\n");
+    int frame_index;
+    for(frame_index = 0; frame_index < 60; frame_index++){
+        obj_processor_three_dimensions_model_vertex *translated_vertices = obj_processor_apply_transform_matrix_to_model(model, translation_matrix);
+        free(model->vertices);
+        model->vertices = translated_vertices;
+        obj_processor_three_dimensions_model_vertex *projected_vertices = obj_processor_apply_transform_matrix_to_model(model, projection_matrix);
+        ppm_processor_canvas *canvas = ppm_processor_get_canvas(canvas_width, canvas_height);
+        draw_model(model, projected_vertices, canvas);
+        char file_name[100];
+        sprintf(file_name, "animation_%d.ppm", frame_index);
+        ppm_processor_print_image(canvas, file_name);
+        printf("Frame %d de %d generado\n", frame_index + 1, 120 );
+        free(projected_vertices);
+        free(canvas->pixels);
+        free(canvas);
+    }
 
-
-    double rotation_angle = (1. / 2.0) * M_PI; 
-    printf("Ploting model\n");
-    obj_processor_transform_matrix *rotation_matrix = obj_processor_get_rotation_matrix_origin_z(rotation_angle);
-    obj_processor_three_dimensions_model_vertex *rotated_vertices = obj_processor_apply_transform_matrix_to_model(model, rotation_matrix);
-    model->vertices = rotated_vertices;
-    projected_vertices = obj_processor_apply_transform_matrix_to_model(model, projection_matrix);
-    canvas = ppm_processor_get_canvas(canvas_width, canvas_height);
-    draw_model(model, projected_vertices, canvas);
-    printf("Printing image\n");
-    ppm_processor_print_image(canvas, "obj_processor_test_rotated.ppm");
-    printf("Success\n");
+    double frame_translation = 20.0 / 60.0;
+    obj_processor_set_three_dimensions_model_vertex(translation, frame_translation, 0, 0, 0);
+    translation_matrix = obj_processor_get_translation_matrix(translation);
+    double frame_rotation = (2 * M_PI) / 60;
+    obj_processor_transform_matrix *rotation_matrix = obj_processor_get_rotation_matrix_origin_z(frame_rotation );
+    obj_processor_transform_matrix *translation_and_rotation_matrix = obj_processor_combine_transform_matrices(translation_matrix, rotation_matrix);
+    int i;
+    printf("-----------------------------------------------------\n");
+    for(i = 0; i < 4; i++){
+        obj_processor_transform_matrix *row = translation_matrix + (i * 4);
+        printf("%lf %lf %lf %lf\n", *row, *(row + 1), *(row + 2), *(row + 3));
+    }
+    printf("-----------------------------------------------------\n");
+    for(i = 0; i < 4; i++){
+        obj_processor_transform_matrix *row = rotation_matrix + (i * 4);
+        printf("%lf %lf %lf %lf\n", *row, *(row + 1), *(row + 2), *(row + 3));
+    }
+    printf("-----------------------------------------------------\n");
+    for(i = 0; i < 4; i++){
+        obj_processor_transform_matrix *row = translation_and_rotation_matrix + (i * 4);
+        printf("%lf %lf %lf %lf\n", *row, *(row + 1), *(row + 2), *(row + 3));
+    }
+    printf("-----------------------------------------------------\n");
+    for(; frame_index < 120; frame_index++){
+        obj_processor_three_dimensions_model_vertex *transformed_vertices = obj_processor_apply_transform_matrix_to_model(model, translation_and_rotation_matrix);
+        free(model->vertices);
+        model->vertices = transformed_vertices;
+        obj_processor_three_dimensions_model_vertex *projected_vertices = obj_processor_apply_transform_matrix_to_model(model, projection_matrix);
+        ppm_processor_canvas *canvas = ppm_processor_get_canvas(canvas_width, canvas_height);
+        draw_model(model, projected_vertices, canvas);
+        char file_name[100];
+        sprintf(file_name, "animation_%d.ppm", frame_index);
+        ppm_processor_print_image(canvas, file_name);
+        printf("Frame %d de %d generado\n", frame_index + 1, 120);
+        free(projected_vertices);
+        free(canvas->pixels);
+        free(canvas);
+    }
 }
 
 void draw_model(obj_processor_three_dimensions_model *model, obj_processor_three_dimensions_model_vertex* projected_vertices, ppm_processor_canvas *canvas){
